@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; manifest-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'">
+  <meta name="theme-color" content="#0e1217">
+  <meta name="description" content="Offline chromatic tuner for guitar and ukulele">
+  <title>Tuner</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app" class="idle">
+    <nav id="modes" role="tablist" aria-label="Instrument"></nav>
+
+    <section id="meter-wrap" aria-hidden="true">
+      <svg id="meter" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">
+        <g id="scale"></g>
+        <path id="zone" d=""></path>
+        <g id="needle-group">
+          <line id="needle" x1="200" y1="232" x2="200" y2="52"
+                stroke-width="5" stroke-linecap="round"></line>
+          <circle id="pivot" cx="200" cy="232" r="9"></circle>
+        </g>
+      </svg>
+      <div id="tune-badge">&#10003; IN TUNE</div>
+    </section>
+
+    <section id="readout">
+      <div id="note" aria-live="polite"><span id="note-name">&ndash;</span><sub id="note-octave"></sub></div>
+      <div id="cents"></div>
+      <div id="freq"></div>
+    </section>
+
+    <section id="strings" aria-label="Strings"></section>
+    <footer id="hint">Tap a string to hear its reference tone</footer>
+
+    <div id="overlay">
+      <h1>Tuner</h1>
+      <button id="start-btn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.94V22h2v-2.56A8 8 0 0 0 20 11.5h-2z"/>
+        </svg>
+        <span id="start-label">Tap to start</span>
+      </button>
+      <p id="overlay-msg">Uses your microphone to hear the strings.<br>Nothing is recorded or sent anywhere.</p>
+    </div>
+  </main>
+</body>
+</html>
