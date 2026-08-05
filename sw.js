@@ -1,6 +1,6 @@
 /* sw.js — offline-first app shell. Bump CACHE on any file change. */
 
-const CACHE = 'tuner-v1';
+const CACHE = 'tuner-v2';
 
 const SHELL = [
   './',

@@ -11,6 +11,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- iOS ignores the manifest's display:standalone; these two are what make an
+       added-to-home-screen tuner open without Safari chrome. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
 </head>
