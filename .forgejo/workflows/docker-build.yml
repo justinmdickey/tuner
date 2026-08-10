@@ -1,0 +1,108 @@
+# Build and publish entirely within the homelab — nothing here reaches github.com,
+# including the `uses:` lines, which resolve against code.forgejo.org.
+#
+# Runs on the self-hosted runner `nimbus-worker` (Proxmox VM 125, joined to the
+# Tardis k3s cluster). Ported from .github/workflows/docker-build.yml following
+# the pattern documented for booky/quilt_planning in kubernetes-homelab's
+# docs/06-ci-and-runners.md.
+#
+# Differences from the GitHub workflow this replaces, all forced rather than
+# chosen:
+#
+# * Registry is Forgejo's own, `forgejo.k8s.erisdor.com/justin`. The image name
+#   is hardcoded rather than derived from github.repository, so a repo rename
+#   can't silently move the published image out from under the Deployment.
+# * `secrets.GITHUB_TOKEN` is NOT usable for the registry — Forgejo's job token
+#   has no package scope, so the push would fail with
+#   `401 Unauthorized: reqPackageAccess`. REGISTRY_TOKEN is a `write:package`
+#   token stored as an Actions secret on this repo.
+# * `cache-from/to: type=gha` was a GitHub-hosted service. Dropped rather than
+#   replaced: `type=registry` against a `:buildcache` tag fails the whole build
+#   on a cache MISS here, which the first build always is.
+# * `runs-on: ubuntu-latest` resolves to a plain `node:22-bookworm` on this
+#   runner, not a GitHub runner image — nothing is preinstalled. `oven-sh/setup-bun`
+#   isn't mirrored on code.forgejo.org, so bun is installed via npm (already present
+#   in the node image) instead of that action. The docker client is likewise
+#   installed explicitly; buildx itself still comes from setup-buildx-action, and
+#   dockerd runs in the runner pod's sidecar.
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+
+env:
+  IMAGE: forgejo.k8s.erisdor.com/justin/tuner
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        run: npm install -g bun
+
+      # There is no microphone in CI, so the detector is validated against
+      # synthesized string tones. Gate the image build on it.
+      - name: Run pitch detection tests
+        run: bun test
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # The job image ships no docker client, so every docker/* action fails with
+      # "Unable to locate executable file: docker" even though the daemon's socket
+      # is mounted in. Only the client is needed.
+      - name: Install the docker CLI
+        run: |
+          set -eu
+          curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-29.7.1.tgz \
+            | tar xz -C /usr/local/bin --strip-components=1 docker/docker
+          docker version --format '{{.Client.Version}}'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Forgejo registry
+        uses: docker/login-action@v3
+        with:
+          registry: forgejo.k8s.erisdor.com
+          username: justin
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
