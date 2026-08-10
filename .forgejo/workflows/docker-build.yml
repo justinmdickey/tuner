@@ -21,12 +21,15 @@
 #   on a cache MISS here, which the first build always is.
 # * `runs-on: ubuntu-latest` resolves to a plain `node:22-bookworm` on this
 #   runner, not a GitHub runner image — nothing is preinstalled. `oven-sh/setup-bun`
-#   isn't mirrored on code.forgejo.org, so bun is installed via npm (already present
-#   in the node image) instead of that action. The docker client is likewise
-#   installed explicitly; buildx itself still comes from setup-buildx-action, and
-#   dockerd runs in the runner pod's sidecar.
+#   isn't mirrored on code.forgejo.org, so bun is installed via its own install
+#   script instead of that action. The docker client is likewise installed
+#   explicitly; buildx itself still comes from setup-buildx-action, and dockerd
+#   runs in the runner pod's sidecar.
+# * `bun test --smol`: the nimbus-worker node this runs on has ~3.8GB RAM and
+#   no swap. Plain `bun test` tripped the *node's* global OOM killer mid-run,
+#   which takes out unrelated pods too (dockerd, csi-node-driver, node_exporter),
+#   not just this job — reproduced 3 times. --smol keeps it inside the budget.
 name: Build and Push Docker Image
-# retrigger: node just rebooted, memory currently free
 
 on:
   push:
@@ -57,8 +60,12 @@ jobs:
 
       # There is no microphone in CI, so the detector is validated against
       # synthesized string tones. Gate the image build on it.
+      # --smol: this runner's node has ~3.8GB RAM and no swap; bun's default
+      # heap growth was enough to trip the *entire node's* OOM killer mid-test,
+      # taking out unrelated pods (dockerd, csi-node-driver, node_exporter) with
+      # it, not just this job. --smol trades GC frequency for a smaller footprint.
       - name: Run pitch detection tests
-        run: bun test
+        run: bun test --smol
 
   build-and-push:
     needs: test
