@@ -66,6 +66,7 @@ jobs:
       # it, not just this job. --smol trades GC frequency for a smaller footprint.
       - name: Run pitch detection tests
         run: bun test --smol
+        # retrigger after pruning stale exited job containers on the runner
 
   build-and-push:
     needs: test
