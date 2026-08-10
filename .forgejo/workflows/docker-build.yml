@@ -25,10 +25,12 @@
 #   script instead of that action. The docker client is likewise installed
 #   explicitly; buildx itself still comes from setup-buildx-action, and dockerd
 #   runs in the runner pod's sidecar.
-# * `bun test --smol`: the nimbus-worker node this runs on has ~3.8GB RAM and
-#   no swap. Plain `bun test` tripped the *node's* global OOM killer mid-run,
-#   which takes out unrelated pods too (dockerd, csi-node-driver, node_exporter),
-#   not just this job — reproduced 3 times. --smol keeps it inside the budget.
+# * `bun test --smol`: kept as cheap insurance, but note the OOMs that made this
+#   look necessary were NOT the node running out of memory. The runner pod's own
+#   cgroups were too small — dind at 2Gi and act_runner at 512Mi, killed
+#   together. Forgejo reports that as a *cancelled* run with a truncated log and
+#   no error, which reads like a workflow bug. Raised in kubernetes-homelab #40,
+#   along with the worker VM going 4 GB -> 6 GB.
 name: Build and Push Docker Image
 
 on:
@@ -60,13 +62,10 @@ jobs:
 
       # There is no microphone in CI, so the detector is validated against
       # synthesized string tones. Gate the image build on it.
-      # --smol: this runner's node has ~3.8GB RAM and no swap; bun's default
-      # heap growth was enough to trip the *entire node's* OOM killer mid-test,
-      # taking out unrelated pods (dockerd, csi-node-driver, node_exporter) with
-      # it, not just this job. --smol trades GC frequency for a smaller footprint.
+      # --smol trades GC frequency for a smaller heap. See the header: the real
+      # fix was raising the runner pod's memory limits, not this flag.
       - name: Run pitch detection tests
         run: bun test --smol
-        # retrigger after pruning stale exited job containers on the runner
 
   build-and-push:
     needs: test
