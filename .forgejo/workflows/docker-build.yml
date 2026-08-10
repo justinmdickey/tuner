@@ -26,7 +26,7 @@
 #   installed explicitly; buildx itself still comes from setup-buildx-action, and
 #   dockerd runs in the runner pod's sidecar.
 name: Build and Push Docker Image
-# retrigger: runner has been stable for 8+ min with no dind restarts
+# retrigger: node just rebooted, memory currently free
 
 on:
   push:
