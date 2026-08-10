@@ -26,7 +26,7 @@
 #   installed explicitly; buildx itself still comes from setup-buildx-action, and
 #   dockerd runs in the runner pod's sidecar.
 name: Build and Push Docker Image
-# retrigger: first run was killed by a runner dind OOM, unrelated to this workflow
+# retrigger: runner was under heavy concurrent load from other repos' builds
 
 on:
   push:
