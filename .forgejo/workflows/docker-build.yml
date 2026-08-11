@@ -9,7 +9,7 @@
 # Differences from the GitHub workflow this replaces, all forced rather than
 # chosen:
 #
-# * Registry is Forgejo's own, `forgejo.k8s.erisdor.com/justin`. The image name
+# * Registry is Forgejo's own, `git.erisdor.com/justin`. The image name
 #   is hardcoded rather than derived from github.repository, so a repo rename
 #   can't silently move the published image out from under the Deployment.
 # * `secrets.GITHUB_TOKEN` is NOT usable for the registry — Forgejo's job token
@@ -48,7 +48,7 @@ on:
       - '.gitignore'
 
 env:
-  IMAGE: forgejo.k8s.erisdor.com/justin/tuner
+  IMAGE: git.erisdor.com/justin/tuner
 
 jobs:
   test:
@@ -98,7 +98,7 @@ jobs:
       - name: Log in to the Forgejo registry
         uses: docker/login-action@v3
         with:
-          registry: forgejo.k8s.erisdor.com
+          registry: git.erisdor.com
           username: justin
           password: ${{ secrets.REGISTRY_TOKEN }}
 
