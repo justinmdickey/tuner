@@ -46,7 +46,7 @@ const EMA_ALPHA = 0.4;      // exponential smoothing on the median
 const IN_TUNE_CENTS = 5;
 const METER_RANGE = 50;     // +/- cents shown on the meter
 const DEG_PER_CENT = 1.1;   // 50 cents -> 55 degrees
-const NULL_STREAK_IDLE = 10;
+const IDLE_MS = 1500;       // how long the last heard note stays on screen
 
 // --- dom -------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ let running = false;
 const timeBuf = new Float32Array(FFT_SIZE);
 let recent = [];            // last few raw detections (Hz)
 let smoothed = null;        // EMA'd frequency (Hz)
-let nullStreak = 0;
+let lastHearTime = 0;       // rAF timestamp of the last valid detection
 let lastDetect = 0;
 let refTone = null;         // { osc: [], gain, chip, timer }
 let wakeLock = null;
@@ -277,7 +277,7 @@ function loop(ts) {
     analyser.getFloatTimeDomainData(timeBuf);
     const raw = detectPitch(timeBuf, audioCtx.sampleRate);
     if (raw !== null) {
-      nullStreak = 0;
+      lastHearTime = ts;
       recent.push(raw);
       if (recent.length > HISTORY) recent.shift();
       const med = median(recent);
@@ -287,9 +287,8 @@ function loop(ts) {
         smoothed += EMA_ALPHA * (med - smoothed);
       }
       render(smoothed);
-    } else {
-      nullStreak++;
-      if (nullStreak === NULL_STREAK_IDLE) resetReadout();
+    } else if (ts - lastHearTime >= IDLE_MS) {
+      resetReadout();
     }
   }
   requestAnimationFrame(loop);
@@ -334,7 +333,7 @@ function render(freq) {
 function resetReadout() {
   recent = [];
   smoothed = null;
-  nullStreak = 0;
+  lastHearTime = 0;
   el.app.classList.add('idle');
   el.app.classList.remove('in-tune');
   el.noteName.textContent = '–';
